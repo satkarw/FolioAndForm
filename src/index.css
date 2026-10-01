@@ -122,6 +122,7 @@ h1, h2 { font-family: var(--serif); font-weight: 400; letter-spacing: -.035em; m
 .reading-list .arrow-link { margin-top: 38px; }
 
 .archive-page, .literature-page { padding: 100px 7vw 160px; }
+.poems-page { padding: 100px 7vw 150px; }
 .archive-heading { display: grid; grid-template-columns: 1fr 2fr 1fr; align-items: end; padding: 45px 2vw 95px; }
 .archive-heading .eyebrow { align-self: start; margin-top: 10px; }
 .archive-heading h1 { font-size: clamp(80px, 11vw, 160px); }
@@ -145,6 +146,42 @@ h1, h2 { font-family: var(--serif); font-weight: 400; letter-spacing: -.035em; m
 .literature-index { display: grid; grid-template-columns: 1fr 3fr; gap: 6vw; }
 .index-note span { font-family: var(--serif); font-size: 42px; }
 .index-note p { max-width: 180px; font-size: 11px; line-height: 1.7; color: var(--ink-soft); }
+
+.poem-search { margin-bottom: 85px; }
+.poem-index { display: grid; grid-template-columns: 1fr 3fr; gap: 6vw; }
+.epic-entry { display: grid; grid-template-columns: 42px minmax(0, 1fr) auto; gap: 20px; align-items: center; padding: 30px 0; border-top: 1px solid var(--line); }
+.epic-entry:last-child { border-bottom: 1px solid var(--line); }
+.epic-number { align-self: start; padding-top: 4px; font-size: 10px; letter-spacing: .13em; color: var(--ink-soft); }
+.epic-copy .eyebrow { font-size: 9px; }
+.epic-copy h2 { font-size: 44px; line-height: 1; margin: 9px 0 8px; }
+.epic-byline { margin: 0; font-family: var(--serif); font-size: 18px; font-style: italic; color: var(--coffee); }
+.epic-byline span { margin-left: 8px; font-size: 15px; color: var(--ink-soft); }
+.epic-note { margin: 11px 0 0; max-width: 540px; font-size: 12px; line-height: 1.65; color: var(--ink-soft); }
+.epic-link { white-space: nowrap; }
+.poem-source-note { margin: 55px 0 0 25%; max-width: 560px; font-size: 10px; line-height: 1.7; color: var(--ink-soft); }
+.poem-search-results { margin-bottom: 90px; }
+.poem-search-results .section-heading { margin-bottom: 35px; }
+.poem-search-results .section-heading h2 { font-size: 48px; }
+.poem-results { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 5vw; }
+.poem-result { position: relative; display: block; min-width: 0; min-height: 125px; padding: 22px 44px 22px 0; border-top: 1px solid var(--line); }
+.poem-result h3 { margin: 12px 0 0; overflow-wrap: anywhere; font: 500 25px/1.1 var(--serif); }
+.poem-result-arrow { position: absolute; right: 5px; bottom: 24px; color: var(--coffee); }
+.poem-result:hover h3 { color: var(--terra); }
+.poem-reader-page { padding: 55px 7vw 130px; }
+.poem-reader-heading { max-width: 900px; margin: 48px auto 60px; text-align: center; }
+.poem-reader-heading h1 { margin: 18px 0; font-size: 76px; line-height: 1; }
+.poem-reader-heading p { margin: 0; font-family: var(--serif); font-size: 20px; font-style: italic; color: var(--coffee); }
+.poem-reader-chapters { max-width: 1000px; margin: 0 auto 65px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 20px 0; }
+.poem-reader-chapters > .eyebrow { margin-bottom: 15px; }
+.poem-reader-chapters > div { display: flex; flex-wrap: wrap; gap: 8px; }
+.poem-reader-chapters a { display: inline-flex; gap: 8px; align-items: baseline; padding: 7px 9px; font-family: var(--serif); font-size: 16px; border-bottom: 1px solid transparent; }
+.poem-reader-chapters a:hover, .poem-reader-chapters a.current-chapter { border-bottom-color: var(--terra); color: var(--terra); }
+.poem-reader-chapters a span { font: 9px var(--sans); color: var(--ink-soft); }
+.poem-reader-text { width: min(700px, 100%); margin: 0 auto; }
+.poem-reader-text p { margin: 0 0 24px; font-family: var(--serif); font-size: 21px; line-height: 1.75; white-space: pre-line; }
+.poem-page-turn { width: min(900px, 100%); margin: 75px auto 0; padding: 20px 0; display: flex; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font: 500 15px var(--serif); }
+.poem-page-turn a:hover { color: var(--terra); }
+.poem-source-link { display: block; width: fit-content; margin: 35px auto 0; font-size: 10px; text-transform: uppercase; letter-spacing: .12em; border-bottom: 1px solid currentColor; padding-bottom: 7px; }
 
 .art-detail { padding: 65px 7vw 150px; display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(280px, .7fr); gap: 8vw; align-items: center; }
 .back-link { grid-column: 1 / -1; justify-self: start; font-size: 10px; text-transform: uppercase; letter-spacing: .13em; margin-bottom: 30px; }
@@ -200,6 +237,10 @@ footer p { margin: 9px 0 0; font-size: 11px; }
   .gallery { columns: 2; }
   .art-detail { grid-template-columns: 1fr; }
   .detail-image { min-height: 0; }
+  .poem-index { grid-template-columns: 1fr; }
+  .poem-index .index-note { display: none; }
+  .poem-source-note { margin-left: 0; }
+  .poem-reader-chapters { margin-bottom: 45px; }
 }
 
 @media (max-width: 650px) {
@@ -229,7 +270,7 @@ footer p { margin: 9px 0 0; font-size: 11px; }
   .book-subject { display: none; }
   .book-language { grid-column: 4; }
   .book-title { font-size: 20px; }
-  .archive-page, .literature-page { padding: 65px 20px 100px; }
+  .archive-page, .literature-page, .poems-page { padding: 65px 20px 100px; }
   .archive-heading { padding: 30px 0 60px; }
   .archive-heading h1 { font-size: 67px; }
   .archive-search { display: block; margin-bottom: 70px; padding: 20px 0; }
@@ -239,6 +280,23 @@ footer p { margin: 9px 0 0; font-size: 11px; }
   .gallery .art-tile:nth-child(even) { margin-left: 12%; }
   .literature-index { grid-template-columns: 1fr; }
   .index-note { display: none; }
+  .epic-entry { min-width: 0; grid-template-columns: 26px minmax(0, 1fr); gap: 12px; padding: 25px 0; }
+  .epic-copy { min-width: 0; }
+  .epic-copy h2 { font-size: 37px; }
+  .epic-byline { font-size: 16px; }
+  .epic-byline span { display: block; margin: 4px 0 0; font-size: 14px; }
+  .epic-link { grid-column: 2; justify-self: start; margin-top: 8px; white-space: normal; }
+  .poem-search-results .section-heading h2 { font-size: 40px; }
+  .poem-results { grid-template-columns: minmax(0, 1fr); }
+  .poem-result { min-height: 100px; }
+  .poem-source-note { margin-top: 40px; }
+  .poem-reader-page { padding: 40px 20px 90px; }
+  .poem-reader-heading { margin: 40px auto 45px; }
+  .poem-reader-heading h1 { font-size: 52px; overflow-wrap: anywhere; }
+  .poem-reader-chapters > div { gap: 3px; }
+  .poem-reader-chapters a { padding: 7px 5px; font-size: 15px; }
+  .poem-reader-text p { font-size: 19px; line-height: 1.7; }
+  .poem-page-turn { font-size: 14px; }
   .art-detail { padding: 45px 20px 100px; gap: 55px; }
   .detail-image { padding: 25px; }
   .detail-info h1 { font-size: 52px; }

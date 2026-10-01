@@ -32,6 +32,9 @@ export default function Shell({ children }: { children: ReactNode }) {
           <Link href="/literature" onNavigate={() => setMenuOpen(false)}>
             Literature
           </Link>
+          <Link href="/poems" onNavigate={() => setMenuOpen(false)}>
+            Poems
+          </Link>
           <Link href="/about" onNavigate={() => setMenuOpen(false)}>
             About
           </Link>
@@ -50,7 +53,7 @@ export default function Shell({ children }: { children: ReactNode }) {
           <p className="wordmark">
             Folio <i>&</i> Form
           </p>
-          <p>A quiet index of paintings and books.</p>
+          <p>A quiet index of art, books, and poems.</p>
         </div>
         <div className="footer-sources">
           <span>Collections drawn from</span>
@@ -59,6 +62,9 @@ export default function Shell({ children }: { children: ReactNode }) {
           </a>
           <a href="https://openlibrary.org/" target="_blank" rel="noreferrer">
             Open Library
+          </a>
+          <a href="https://en.wikisource.org/" target="_blank" rel="noreferrer">
+            Wikisource
           </a>
         </div>
         <p className="footer-note">Open collections, thoughtfully arranged.</p>

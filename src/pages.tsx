@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from "react"
 import { getArtwork, getArtworks } from "./lib/api/art"
 import { getLiteraryWork, getLiterature } from "./lib/api/literature"
+import { getPoemText, poemSourceUrl, searchPoems } from "./lib/api/poems"
 import type { Artwork } from "./types/art"
 import type { LiteraryWork } from "./types/literature"
 import {
@@ -255,6 +256,271 @@ export function LiteraturePage() {
   )
 }
 
+const epicPoems = [
+  {
+    title: "The Iliad",
+    author: "Homer",
+    edition: "Translated by Samuel Butler",
+    period: "Ancient Greece",
+    note: "A siege, a quarrel, and the cost of glory on the plains of Troy.",
+    source: "The Iliad of Homer (Butler)",
+    opening: "The Iliad of Homer (Butler)/Book 1",
+  },
+  {
+    title: "The Odyssey",
+    author: "Homer",
+    edition: "Translated by Samuel Butler",
+    period: "Ancient Greece",
+    note: "A long return home through strange islands, old debts, and the sea.",
+    source: "The Odyssey (Butler)",
+    opening: "The Odyssey (Butler)/Book I",
+  },
+  {
+    title: "Paradise Lost",
+    author: "John Milton",
+    edition: "The 1674 edition",
+    period: "Seventeenth century",
+    note: "The rebellion of the angels and the first disobedience of humankind.",
+    source: "Paradise Lost (1674)",
+    opening: "Paradise Lost (1674)/Book I",
+  },
+  {
+    title: "The Kalevala",
+    author: "Elias Lönnrot",
+    edition: "Translated by John Martin Crawford",
+    period: "Finnish folk poetry",
+    note: "Songs of Väinämöinen, forged from generations of oral tradition.",
+    source: "The Kalevala",
+    opening: "The Kalevala/Rune I",
+  },
+]
+
+function poemReaderHref(work: string, page: string) {
+  const params = new URLSearchParams({ work, page })
+  return `/poems/read?${params}`
+}
+
+export function PoemsPage() {
+  const [query, setQuery] = useState("")
+  const [activeQuery, setActiveQuery] = useState("")
+  const poems = useLoad(
+    (signal) =>
+      activeQuery ? searchPoems(activeQuery, signal) : Promise.resolve([]),
+    `poems-${activeQuery}`,
+  )
+
+  return (
+    <section className="poems-page">
+      <header className="archive-heading">
+        <span className="eyebrow">Public-domain poetry · Wikisource</span>
+        <h1>The Long Song</h1>
+        <p>Epic journeys, ancient voices, and poems made to be read aloud.</p>
+      </header>
+
+      <form
+        className="archive-search poem-search"
+        onSubmit={(event) => {
+          event.preventDefault()
+          setActiveQuery(query.trim())
+        }}
+      >
+        <label htmlFor="poem-query">Search poems, poets, or translations</label>
+        <div>
+          <input
+            id="poem-query"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder="Try “Dante” or “Beowulf”"
+          />
+          <button>Search</button>
+        </div>
+      </form>
+
+      {activeQuery && (
+        <section className="poem-search-results" aria-live="polite">
+          <header className="section-heading">
+            <div>
+              <span className="eyebrow">Wikisource catalogue</span>
+              <h2>Search results</h2>
+            </div>
+            <button
+              className="text-button"
+              onClick={() => {
+                setActiveQuery("")
+                setQuery("")
+              }}
+            >
+              Clear search
+            </button>
+          </header>
+          {poems.error ? (
+            <StateMessage eyebrow="Catalogue unavailable" action={poems.retry}>
+              {poems.error}
+            </StateMessage>
+          ) : !poems.data ? (
+            <StateMessage eyebrow="Searching the shelves">
+              Looking through the poetry catalogue…
+            </StateMessage>
+          ) : poems.data.length === 0 ? (
+            <StateMessage eyebrow="No poems found">
+              Try a poet, title, or another translation.
+            </StateMessage>
+          ) : (
+            <div className="poem-results">
+              {poems.data.map((poem) => (
+                <Link
+                  className="poem-result"
+                  href={poemReaderHref(poem.title, poem.title)}
+                  key={poem.pageId}
+                >
+                  <span className="eyebrow">Wikisource text</span>
+                  <h3>{poem.title}</h3>
+                  <span className="poem-result-arrow" aria-hidden="true">
+                    →
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      <div className="poem-index">
+        <aside className="index-note">
+          <span>{activeQuery ? "The shelf" : "Contents"}</span>
+          <p>
+            {activeQuery
+              ? "A short list of long journeys."
+              : "Old stories, carried forward in verse."}
+          </p>
+        </aside>
+        <div className="epic-list">
+          {epicPoems.map((poem, index) => (
+            <article className="epic-entry" key={poem.title}>
+              <span className="epic-number">{String(index + 1).padStart(2, "0")}</span>
+              <div className="epic-copy">
+                <span className="eyebrow">{poem.period}</span>
+                <h2>{poem.title}</h2>
+                <p className="epic-byline">
+                  {poem.author} <span>{poem.edition}</span>
+                </p>
+                <p className="epic-note">{poem.note}</p>
+              </div>
+              <Link
+                className="arrow-link epic-link"
+                href={poemReaderHref(poem.source, poem.opening)}
+              >
+                Read on this site <span>→</span>
+              </Link>
+            </article>
+          ))}
+        </div>
+      </div>
+      <p className="poem-source-note">
+        Texts and translations are provided by Wikisource. Edition and translation
+        rights vary; each source page includes its own publication details.
+      </p>
+    </section>
+  )
+}
+
+export function PoemReaderPage({
+  work,
+  page,
+}: {
+  work: string
+  page: string
+}) {
+  const poem = useLoad(
+    (signal) => getPoemText(work, page, signal),
+    `poem-reader-${work}-${page}`,
+  )
+  if (!work || !page)
+    return (
+      <StateMessage eyebrow="No poem selected">
+        Choose a poem from the shelf to begin reading.
+      </StateMessage>
+    )
+  if (poem.error)
+    return (
+      <StateMessage eyebrow="Text unavailable" action={poem.retry}>
+        {poem.error}
+      </StateMessage>
+    )
+  if (!poem.data)
+    return (
+      <StateMessage eyebrow="Opening the text">
+        Bringing the poem into view…
+      </StateMessage>
+    )
+
+  const chapters = poem.data.chapters
+  const currentChapter = chapters.findIndex((chapter) => chapter.title === page)
+  const previous = currentChapter > 0 ? chapters[currentChapter - 1] : null
+  const next = currentChapter >= 0 ? chapters[currentChapter + 1] : chapters[0]
+
+  return (
+    <article className="poem-reader-page">
+      <Link href="/poems" className="back-link">
+        ← Return to poems
+      </Link>
+      <header className="poem-reader-heading">
+        <span className="eyebrow">A text from Wikisource</span>
+        <h1>{poem.data.title.split("/").pop()}</h1>
+        {work !== page && <p>{work}</p>}
+      </header>
+      {chapters.length > 0 && (
+        <nav className="poem-reader-chapters" aria-label="Chapters">
+          <span className="eyebrow">In this work</span>
+          <div>
+            {chapters.map((chapter, index) => (
+              <Link
+                key={chapter.title}
+                href={poemReaderHref(work, chapter.title)}
+                className={chapter.title === page ? "current-chapter" : ""}
+              >
+                <span>{String(index + 1).padStart(2, "0")}</span>
+                {chapter.label}
+              </Link>
+            ))}
+          </div>
+        </nav>
+      )}
+      {poem.data.paragraphs.length > 0 ? (
+        <div className="poem-reader-text">
+          {poem.data.paragraphs.map((paragraph, index) => (
+            <p key={`${index}-${paragraph.slice(0, 24)}`}>{paragraph}</p>
+          ))}
+        </div>
+      ) : (
+        <StateMessage eyebrow="Contents page">
+          Choose a book or chapter above to read the poem.
+        </StateMessage>
+      )}
+      <nav className="poem-page-turn" aria-label="Continue reading">
+        {previous ? (
+          <Link href={poemReaderHref(work, previous.title)}>
+            ← {previous.label}
+          </Link>
+        ) : <span />}
+        {next && next.title !== page && (
+          <Link href={poemReaderHref(work, next.title)}>
+            {next.label} →
+          </Link>
+        )}
+      </nav>
+      <a
+        href={poem.data.sourceUrl}
+        target="_blank"
+        rel="noreferrer"
+        className="poem-source-link"
+      >
+        View this edition at Wikisource ↗
+      </a>
+    </article>
+  )
+}
+
 export function ArtworkDetailPage({ id }: { id: string }) {
   const art = useLoad((signal) => getArtwork(id, signal), `art-detail-${id}`)
   if (art.error)
@@ -474,9 +740,9 @@ export function AboutPage() {
       </h1>
       <div>
         <p>
-          Folio & Form brings two public collections into one quiet place:
-          open-access art from the Art Institute of Chicago and books from Open
-          Library.
+          Folio & Form brings public collections into one quiet place: art from
+          the Art Institute of Chicago, books from Open Library, and poetry from
+          Wikisource.
         </p>
         <p>
           The arrangement is editorial; the works remain with the institutions
