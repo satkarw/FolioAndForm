@@ -57,8 +57,8 @@ export default function Shell({ children }: { children: ReactNode }) {
         </div>
         <div className="footer-sources">
           <span>Collections drawn from</span>
-          <a href="https://www.artic.edu/" target="_blank" rel="noreferrer">
-            Art Institute of Chicago
+          <a href="https://www.clevelandart.org/" target="_blank" rel="noreferrer">
+            Cleveland Museum of Art
           </a>
           <a href="https://openlibrary.org/" target="_blank" rel="noreferrer">
             Open Library

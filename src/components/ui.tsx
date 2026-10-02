@@ -1,5 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react"
-import { getArtworkImageFallback } from "../lib/api/art"
+import { useState, type ReactNode } from "react"
 import type { Artwork } from "../types/art"
 import type { LiteraryWork } from "../types/literature"
 
@@ -57,32 +56,22 @@ export function StateMessage({
 export function ArtworkImage({
   artwork,
   eager = false,
+  onUnavailable,
 }: {
   artwork: Artwork
   eager?: boolean
+  onUnavailable?: () => void
 }) {
-  const [failed, setFailed] = useState(!artwork.imageUrl)
-  const [fallbackUrl, setFallbackUrl] = useState<string | null>(null)
-  useEffect(() => {
-    if (!failed) return
-    const controller = new AbortController()
-    getArtworkImageFallback(artwork, controller.signal)
-      .then(setFallbackUrl)
-      .catch(() => setFallbackUrl(null))
-    return () => controller.abort()
-  }, [artwork, failed])
-
-  if (failed && !fallbackUrl) {
-    return <div className="image-fallback">Image unavailable</div>
-  }
+  const [failedUrl, setFailedUrl] = useState<string | null>(null)
+  if (!artwork.imageUrl || failedUrl === artwork.imageUrl) return null
   return (
     <img
-      src={failed ? fallbackUrl || undefined : artwork.imageUrl || undefined}
+      src={artwork.imageUrl}
       alt={artwork.imageAlt}
       loading={eager ? "eager" : "lazy"}
       onError={() => {
-        if (failed) setFallbackUrl(null)
-        else setFailed(true)
+        setFailedUrl(artwork.imageUrl)
+        onUnavailable?.()
       }}
     />
   )
@@ -91,14 +80,24 @@ export function ArtworkImage({
 export function ArtworkTile({
   artwork,
   index,
+  onUnavailable,
 }: {
   artwork: Artwork
   index: number
+  onUnavailable?: () => void
 }) {
+  const [unavailable, setUnavailable] = useState(false)
+  if (!artwork.imageUrl || unavailable) return null
   return (
     <article className={`art-tile art-tile-${(index % 5) + 1}`}>
       <Link href={`/art/${artwork.id}`} className="art-image-link">
-        <ArtworkImage artwork={artwork} />
+        <ArtworkImage
+          artwork={artwork}
+          onUnavailable={() => {
+            setUnavailable(true)
+            onUnavailable?.()
+          }}
+        />
       </Link>
       <div className="art-caption">
         <Link href={`/art/${artwork.id}`}>{artwork.title}</Link>

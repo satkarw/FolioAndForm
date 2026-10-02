@@ -32,6 +32,9 @@ function useLoad<T>(loader: (signal: AbortSignal) => Promise<T>, key: string) {
 }
 
 export function HomePage() {
+  const [unavailableFeaturedImage, setUnavailableFeaturedImage] = useState<
+    string | null
+  >(null)
   const art = useLoad(
     (signal) => getArtworks("impressionism", 1, 7, signal),
     "home-art",
@@ -62,18 +65,24 @@ export function HomePage() {
       </section>
 
       <section className="featured-work">
-        {featured ? (
+        {featured && featured.imageUrl !== unavailableFeaturedImage ? (
           <>
             <div className="featured-image">
-              <ArtworkImage artwork={featured} eager />
+              <ArtworkImage
+                artwork={featured}
+                eager
+                onUnavailable={() =>
+                  setUnavailableFeaturedImage(featured.imageUrl)
+                }
+              />
             </div>
             <div className="featured-copy">
               <span className="eyebrow">From the collection · I</span>
               <h2>{featured.title}</h2>
               <p className="artist-line">{featured.artist}</p>
               <p>
-                {featured.date}. {featured.medium}. A work from the Art
-                Institute of Chicago’s open collection.
+                {featured.date}. {featured.medium}. A work from the Cleveland
+                Museum of Art’s open-access collection.
               </p>
               <Link href={`/art/${featured.id}`} className="arrow-link">
                 Look closely <span>→</span>
@@ -140,6 +149,7 @@ export function HomePage() {
 export function ArtPage() {
   const [query, setQuery] = useState("")
   const [activeQuery, setActiveQuery] = useState("")
+  const [unavailableImages, setUnavailableImages] = useState<number[]>([])
   const art = useLoad(
     (signal) => getArtworks(activeQuery, 1, 15, signal),
     `art-${activeQuery}`,
@@ -148,7 +158,7 @@ export function ArtPage() {
     <section className="archive-page">
       <header className="archive-heading">
         <span className="eyebrow">
-          Open collection · Art Institute of Chicago
+          Open collection · Cleveland Museum of Art
         </span>
         <h1>The Gallery</h1>
         <p>Paintings from across centuries. Look without hurry.</p>
@@ -157,6 +167,7 @@ export function ArtPage() {
         className="archive-search"
         onSubmit={(event) => {
           event.preventDefault()
+          setUnavailableImages([])
           setActiveQuery(query)
         }}
       >
@@ -172,7 +183,13 @@ export function ArtPage() {
         </div>
       </form>
       {art.error ? (
-        <StateMessage eyebrow="Collection unavailable" action={art.retry}>
+        <StateMessage
+          eyebrow="Collection unavailable"
+          action={() => {
+            setUnavailableImages([])
+            art.retry()
+          }}
+        >
           {art.error}
         </StateMessage>
       ) : !art.data ? (
@@ -183,10 +200,23 @@ export function ArtPage() {
         <StateMessage eyebrow="No works found">
           Try another artist, place, or subject.
         </StateMessage>
+      ) : unavailableImages.length >= art.data.items.length ? (
+        <StateMessage eyebrow="No accessible images">
+          The collection returned no paintings with images available right now.
+        </StateMessage>
       ) : (
         <div className="gallery">
           {art.data.items.map((item, index) => (
-            <ArtworkTile key={item.id} artwork={item} index={index} />
+            <ArtworkTile
+              key={item.id}
+              artwork={item}
+              index={index}
+              onUnavailable={() =>
+                setUnavailableImages((current) =>
+                  current.includes(item.id) ? current : [...current, item.id],
+                )
+              }
+            />
           ))}
         </div>
       )}
@@ -522,6 +552,7 @@ export function PoemReaderPage({
 }
 
 export function ArtworkDetailPage({ id }: { id: string }) {
+  const [unavailableImage, setUnavailableImage] = useState<string | null>(null)
   const art = useLoad((signal) => getArtwork(id, signal), `art-detail-${id}`)
   if (art.error)
     return (
@@ -536,13 +567,23 @@ export function ArtworkDetailPage({ id }: { id: string }) {
       </StateMessage>
     )
   const item = art.data
+  if (!item.imageUrl || item.imageUrl === unavailableImage)
+    return (
+      <StateMessage eyebrow="Artwork image unavailable">
+        This work is not shown because its collection image could not be loaded.
+      </StateMessage>
+    )
   return (
     <article className="art-detail">
       <Link href="/art" className="back-link">
         ← Return to gallery
       </Link>
       <div className="detail-image">
-        <ArtworkImage artwork={item} eager />
+        <ArtworkImage
+          artwork={item}
+          eager
+          onUnavailable={() => setUnavailableImage(item.imageUrl)}
+        />
       </div>
       <div className="detail-info">
         <span className="eyebrow">{item.classification}</span>
@@ -563,7 +604,7 @@ export function ArtworkDetailPage({ id }: { id: string }) {
           </div>
           <div>
             <dt>Collection</dt>
-            <dd>Art Institute of Chicago</dd>
+            <dd>Cleveland Museum of Art</dd>
           </div>
         </dl>
         {item.description && (
@@ -741,7 +782,7 @@ export function AboutPage() {
       <div>
         <p>
           Folio & Form brings public collections into one quiet place: art from
-          the Art Institute of Chicago, books from Open Library, and poetry from
+          the Cleveland Museum of Art, books from Open Library, and poetry from
           Wikisource.
         </p>
         <p>

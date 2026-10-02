@@ -1,6 +1,6 @@
 # Folio & Form
 
-A small reading room for artwork from the Art Institute of Chicago and books catalogued by Open Library.
+A small reading room for CC0 artwork from the Cleveland Museum of Art and books catalogued by Open Library.
 
 ## Getting started
 
