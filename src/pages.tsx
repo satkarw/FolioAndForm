@@ -31,19 +31,38 @@ function useLoad<T>(loader: (signal: AbortSignal) => Promise<T>, key: string) {
   return { data, error, retry: () => setVersion((value) => value + 1) }
 }
 
+function shuffled<T>(items: readonly T[]): T[] {
+  const result = [...items]
+  for (let index = result.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1))
+    ;[result[index], result[swapIndex]] = [result[swapIndex], result[index]]
+  }
+  return result
+}
+
+function randomPage(maxPages: number) {
+  return Math.floor(Math.random() * maxPages) + 1
+}
+
 export function HomePage() {
+  const [randomBookPage] = useState(() => randomPage(20))
   const [unavailableFeaturedImage, setUnavailableFeaturedImage] = useState<
     string | null
   >(null)
   const art = useLoad(
-    (signal) => getArtworks("impressionism", 1, 7, signal),
+    (signal) => getArtworks("", 1, 15, signal),
     "home-art",
   )
   const books = useLoad(
-    (signal) => getLiterature("Virginia Woolf", 1, signal),
-    "home-books",
+    (signal) => getLiterature("", randomBookPage, signal),
+    `home-books-${randomBookPage}`,
   )
-  const featured = art.data?.items[0]
+  const homeArt = useMemo(() => shuffled(art.data?.items ?? []), [art.data])
+  const homeBooks = useMemo(
+    () => shuffled(books.data?.items ?? []),
+    [books.data],
+  )
+  const featured = homeArt[0]
   return (
     <>
       <section className="home-intro">
@@ -111,7 +130,7 @@ export function HomePage() {
           </Link>
         </header>
         <div className="preview-grid">
-          {art.data?.items
+          {homeArt
             .slice(1, 5)
             .map((item, index) => (
               <ArtworkTile key={item.id} artwork={item} index={index} />
@@ -132,7 +151,7 @@ export function HomePage() {
           “I ransack public libraries, and find them full of sunk treasure.”
         </blockquote>
         <div className="reading-list">
-          {books.data?.items
+          {homeBooks
             .slice(0, 3)
             .map((book, index) => (
               <BookRow key={book.id} book={book} number={index + 1} />
@@ -149,10 +168,11 @@ export function HomePage() {
 export function ArtPage() {
   const [query, setQuery] = useState("")
   const [activeQuery, setActiveQuery] = useState("")
+  const [page, setPage] = useState(1)
   const [unavailableImages, setUnavailableImages] = useState<number[]>([])
   const art = useLoad(
-    (signal) => getArtworks(activeQuery, 1, 15, signal),
-    `art-${activeQuery}`,
+    (signal) => getArtworks(activeQuery, page, 15, signal),
+    `art-${activeQuery}-${page}`,
   )
   return (
     <section className="archive-page">
@@ -161,14 +181,15 @@ export function ArtPage() {
           Open collection · Cleveland Museum of Art
         </span>
         <h1>The Gallery</h1>
-        <p>Paintings from across centuries. Look without hurry.</p>
+        <p>Artworks from across centuries. Look without hurry.</p>
       </header>
       <form
         className="archive-search"
         onSubmit={(event) => {
           event.preventDefault()
           setUnavailableImages([])
-          setActiveQuery(query)
+          setPage(1)
+          setActiveQuery(query.trim())
         }}
       >
         <label htmlFor="art-query">Search by artist, place, or subject</label>
@@ -202,23 +223,52 @@ export function ArtPage() {
         </StateMessage>
       ) : unavailableImages.length >= art.data.items.length ? (
         <StateMessage eyebrow="No accessible images">
-          The collection returned no paintings with images available right now.
+          The collection returned no visual artworks with images available right now.
         </StateMessage>
       ) : (
-        <div className="gallery">
-          {art.data.items.map((item, index) => (
-            <ArtworkTile
-              key={item.id}
-              artwork={item}
-              index={index}
-              onUnavailable={() =>
-                setUnavailableImages((current) =>
-                  current.includes(item.id) ? current : [...current, item.id],
-                )
-              }
-            />
-          ))}
-        </div>
+        <>
+          <div className="gallery">
+            {art.data.items.map((item, index) => (
+              <ArtworkTile
+                key={item.id}
+                artwork={item}
+                index={index}
+                onUnavailable={() =>
+                  setUnavailableImages((current) =>
+                    current.includes(item.id) ? current : [...current, item.id],
+                  )
+                }
+              />
+            ))}
+          </div>
+          {art.data.totalPages > 1 && (
+            <nav className="gallery-pagination" aria-label="Gallery pages">
+              <button
+                type="button"
+                onClick={() => {
+                  setUnavailableImages([])
+                  setPage((current) => Math.max(1, current - 1))
+                }}
+                disabled={page <= 1}
+              >
+                ← Previous
+              </button>
+              <span aria-live="polite">
+                Page {page} of {art.data.totalPages}
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setUnavailableImages([])
+                  setPage((current) => Math.min(art.data!.totalPages, current + 1))
+                }}
+                disabled={page >= art.data.totalPages}
+              >
+                Next →
+              </button>
+            </nav>
+          )}
+        </>
       )}
     </section>
   )
@@ -227,10 +277,16 @@ export function ArtPage() {
 export function LiteraturePage() {
   const [query, setQuery] = useState("")
   const [activeQuery, setActiveQuery] = useState("")
+  const [randomDefaultPage] = useState(() => randomPage(20))
   const books = useLoad(
-    (signal) => getLiterature(activeQuery, 1, signal),
-    `books-${activeQuery}`,
+    (signal) =>
+      getLiterature(activeQuery, activeQuery ? 1 : randomDefaultPage, signal),
+    `books-${activeQuery}-${randomDefaultPage}`,
   )
+  const bookItems = useMemo(() => {
+    const items = books.data?.items ?? []
+    return activeQuery ? items : shuffled(items)
+  }, [books.data, activeQuery])
   return (
     <section className="literature-page">
       <header className="archive-heading">
@@ -276,7 +332,7 @@ export function LiteraturePage() {
               Locating the volumes…
             </StateMessage>
           ) : (
-            books.data.items.map((book, index) => (
+            bookItems.map((book, index) => (
               <BookRow key={book.id} book={book} number={index + 1} />
             ))
           )}
@@ -333,6 +389,7 @@ function poemReaderHref(work: string, page: string) {
 export function PoemsPage() {
   const [query, setQuery] = useState("")
   const [activeQuery, setActiveQuery] = useState("")
+  const [randomizedEpics] = useState(() => shuffled(epicPoems))
   const poems = useLoad(
     (signal) =>
       activeQuery ? searchPoems(activeQuery, signal) : Promise.resolve([]),
@@ -425,7 +482,7 @@ export function PoemsPage() {
           </p>
         </aside>
         <div className="epic-list">
-          {epicPoems.map((poem, index) => (
+          {randomizedEpics.map((poem, index) => (
             <article className="epic-entry" key={poem.title}>
               <span className="epic-number">{String(index + 1).padStart(2, "0")}</span>
               <div className="epic-copy">

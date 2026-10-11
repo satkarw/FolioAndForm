@@ -1,9 +1,16 @@
 import type { Artwork, ArtworkPage } from "../../types/art"
 
 const API = "https://openaccess-api.clevelandart.org/api/artworks"
+const ART_TYPES = [
+  { name: "Painting", pageSize: 3 },
+  { name: "Drawing", pageSize: 2 },
+  { name: "Print", pageSize: 9 },
+  { name: "Photograph", pageSize: 1 },
+] as const
 const FIELDS = [
   "id",
   "title",
+  "type",
   "creators",
   "creation_date",
   "technique",
@@ -19,6 +26,7 @@ const FIELDS = [
 interface ClevelandArtwork {
   id: number
   title?: string
+  type?: string
   creators?: Array<{
     description?: string
     role?: string | null
@@ -45,7 +53,7 @@ function normalize(item: ClevelandArtwork): Artwork {
     date: item.creation_date || "Date unknown",
     medium: item.technique || "Medium not recorded",
     origin: item.culture?.join(", ") || "Origin not recorded",
-    classification: item.collection || item.department || "Artwork",
+    classification: item.type || item.collection || item.department || "Artwork",
     imageUrl:
       item.share_license_status === "CC0"
         ? item.images?.web?.url || null
@@ -68,21 +76,72 @@ export async function getArtworks(
   limit = 12,
   signal?: AbortSignal,
 ): Promise<ArtworkPage> {
-  const params = new URLSearchParams({
-    q: query || "painting",
-    has_image: "1",
-    skip: String((page - 1) * limit),
-    limit: String(limit),
-    fields: FIELDS,
-  })
-  const data = await request(`${API}/?${params}`, signal)
+  const targetSizes = ART_TYPES.map(({ pageSize }) => (limit * pageSize) / 15)
+  const pageSizes = targetSizes.map((size) => Math.floor(size))
+  for (let index = 0; index < pageSizes.length; index += 1) {
+    pageSizes[index] = Math.max(1, pageSizes[index])
+  }
+  while (pageSizes.reduce((sum, size) => sum + size, 0) > limit) {
+    const index = pageSizes.reduce(
+      (smallest, size, current) =>
+        size > 1 &&
+        (smallest === -1 ||
+          targetSizes[current] - Math.floor(targetSizes[current]) <
+            targetSizes[smallest] - Math.floor(targetSizes[smallest]))
+          ? current
+          : smallest,
+      -1,
+    )
+    if (index === -1) break
+    pageSizes[index] -= 1
+  }
+  while (pageSizes.reduce((sum, size) => sum + size, 0) < limit) {
+    const index = targetSizes.reduce(
+      (largest, target, current) =>
+        target - pageSizes[current] > targetSizes[largest] - pageSizes[largest]
+          ? current
+          : largest,
+      0,
+    )
+    pageSizes[index] += 1
+  }
+  const collections = await Promise.all(
+    ART_TYPES.map(async ({ name }, index) => {
+      const pageSize = pageSizes[index]
+      const params = new URLSearchParams({
+        cc0: "",
+        has_image: "1",
+        skip: String((page - 1) * pageSize),
+        limit: String(pageSize),
+        fields: FIELDS,
+        type: name,
+      })
+      if (query.trim()) params.set("q", query.trim())
+      const data = await request(`${API}/?${params}`, signal)
+      return {
+        items: (data.data as ClevelandArtwork[])
+          .filter(
+            (item) =>
+              item.type === name &&
+              item.share_license_status === "CC0" &&
+              item.images?.web?.url,
+          )
+          .map(normalize),
+        totalPages: Math.ceil(data.info.total / pageSize),
+      }
+    }),
+  )
+  const items: Artwork[] = []
+  for (let index = 0; collections.some(({ items }) => items[index]); index += 1) {
+    for (const collection of collections) {
+      const item = collection.items[index]
+      if (item) items.push(item)
+    }
+  }
   return {
-    items: (data.data as ClevelandArtwork[])
-      .filter((item) => item.share_license_status === "CC0")
-      .map(normalize)
-      .filter((item) => item.imageUrl),
+    items,
     page,
-    totalPages: Math.ceil(data.info.total / limit),
+    totalPages: Math.max(...collections.map(({ totalPages }) => totalPages)),
   }
 }
 
@@ -91,5 +150,7 @@ export async function getArtwork(
   signal?: AbortSignal,
 ): Promise<Artwork> {
   const data = await request(`${API}/${id}?fields=${FIELDS}`, signal)
+  if (!ART_TYPES.some(({ name }) => data.data.type === name))
+    throw new Error("This record is not a painting, drawing, print, or photograph.")
   return normalize(data.data)
 }
